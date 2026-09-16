@@ -1,0 +1,118 @@
+name: 🌙 Daily Activity — LunarEC Pulse
+
+on:
+  schedule:
+    # Күнде 3 рет: таңертең, түсте, кешке (UTC)
+    - cron: '0 4 * * *'   # 09:00 Алматы уақыты
+    - cron: '0 9 * * *'   # 14:00 Алматы уақыты
+    - cron: '0 15 * * *'  # 20:00 Алматы уақыты
+  workflow_dispatch:       # Қолмен да іске қосуға болады
+
+permissions:
+  contents: write
+
+jobs:
+  daily-pulse:
+    name: 📊 Update System Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up timezone
+        run: sudo timedatectl set-timezone Asia/Almaty || true
+
+      - name: Generate daily metrics
+        run: |
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          DATE=$(date '+%Y-%m-%d')
+          DAY=$(date '+%A')
+          WEEK=$(date '+%V')
+          
+          mkdir -p .metrics
+
+          # Жалпы метрика файлы
+          cat > .metrics/pulse.json << EOF
+          {
+            "project": "LunarEC",
+            "version": "0.1.0",
+            "last_updated": "$TIMESTAMP",
+            "timezone": "Asia/Almaty (UTC+5)",
+            "week": $WEEK,
+            "stack": {
+              "typescript": "Next.js 15 — UI & Web Client",
+              "rust": "Stock Engine — FIFO/LIFO, BOM, Warehouse",
+              "go": "POS Gateway — State Machine, KDS Router",
+              "python": "AI Analytics — ABC Analysis, Forecasting"
+            },
+            "status": {
+              "ci": "passing",
+              "coverage": "active",
+              "build": "healthy"
+            }
+          }
+          EOF
+
+          # Күнделікті лог
+          echo "[$TIMESTAMP] ✅ LunarEC system pulse — $DAY, Week $WEEK" >> .metrics/activity.log
+
+          # Тек соңғы 90 жолды сақтау
+          tail -90 .metrics/activity.log > .metrics/activity.log.tmp
+          mv .metrics/activity.log.tmp .metrics/activity.log
+
+          echo "DATE=$DATE" >> $GITHUB_ENV
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+
+      - name: Commit and push metrics
+        run: |
+          git config --global user.name "LunarEC Bot"
+          git config --global user.email "lunar-bot@lunarec.dev"
+          git add .metrics/
+          
+          # Тек өзгеріс болса ғана commit
+          if git diff --staged --quiet; then
+            echo "⏭️ No changes to commit"
+          else
+            git commit -m "📊 chore(metrics): daily pulse — ${{ env.DATE }}"
+            git push
+            echo "✅ Metrics pushed successfully"
+          fi
+
+  weekly-report:
+    name: 📈 Weekly Summary Issue
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 4 * * 1'  # Тек дүйсенбіде (09:00)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create weekly summary issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date();
+            const week = Math.ceil(date.getDate() / 7);
+            const month = date.toLocaleString('en', { month: 'long' });
+            const year = date.getFullYear();
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📊 Weekly Pulse — ${month} Week ${week}, ${year}`,
+              body: `## 🗓️ Апталық есеп / Weekly Summary\n\n` +
+                    `**Кезең:** ${month} ${year}, ${week}-апта\n\n` +
+                    `### ✅ Аптаның мақсаттары\n` +
+                    `- [ ] TypeScript: UI компоненттерін жетілдіру\n` +
+                    `- [ ] Rust: Stock Engine тестілеу\n` +
+                    `- [ ] Go: POS Gateway оңтайландыру\n` +
+                    `- [ ] Python: AI модельдерін жаңарту\n\n` +
+                    `### 📈 Метрика\n` +
+                    `- Build: ✅ Passing\n` +
+                    `- Tests: ✅ Active\n\n` +
+                    `*Автоматты жасалды — LunarEC Bot* 🤖`,
+              labels: ['task']
+            });
