@@ -2,7 +2,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen?style=for-the-badge" alt="Status" />
-  <img src="https://img.shields.io/badge/CI%2FCD-4%20Pipelines%20Passing-brightgreen?style=for-the-badge&logo=github-actions" alt="CI" />
+  <a href="https://github.com/BekbolatBolebay/LunarEC/actions">
+    <img src="https://img.shields.io/badge/CI%2FCD-4%20Pipelines%20Passing-brightgreen?style=for-the-badge&logo=github-actions" alt="CI" />
+  </a>
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
 </p>
 
