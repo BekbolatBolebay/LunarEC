@@ -1,0 +1,13 @@
+# Treat raw extracted reference modules as vendored so active polyglot code is balanced
+CRM/modules/** linguist-vendored
+ERP/modules/** linguist-vendored
+CRM/schema/** linguist-documentation
+ERP/schema/** linguist-documentation
+
+# Ensure all 4 polyglot languages are prominently detected
+crates/**/*.rs linguist-detectable=true
+services/pos-gateway/**/*.go linguist-detectable=true
+services/ai-analytics/**/*.py linguist-detectable=true
+app/**/*.tsx linguist-detectable=true
+components/**/*.tsx linguist-detectable=true
+lib/**/*.ts linguist-detectable=true
