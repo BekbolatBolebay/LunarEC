@@ -1,0 +1,18 @@
+{
+  "project": "LunarEC",
+  "version": "0.1.0",
+  "last_updated": "2026-09-16 22:13:11",
+  "timezone": "Asia/Almaty (UTC+5)",
+  "week": 38,
+  "stack": {
+    "typescript": "Next.js 15 — UI & Web Client",
+    "rust": "Stock Engine — FIFO/LIFO, BOM, Warehouse",
+    "go": "POS Gateway — State Machine, KDS Router",
+    "python": "AI Analytics — ABC Analysis, Forecasting"
+  },
+  "status": {
+    "ci": "passing",
+    "coverage": "active",
+    "build": "healthy"
+  }
+}
