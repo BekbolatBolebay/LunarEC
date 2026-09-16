@@ -106,5 +106,5 @@ LunarEC/
 
 ## 📄 Лицензия
 
-MIT License © 2026 LunarEC Contributors.
+MIT License © 2026 LunarNT Team.
 Барлық әзірлеушілер мен қауымдастық мүшелері өз үлесін қоса алады! 🚀
