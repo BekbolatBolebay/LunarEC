@@ -1,0 +1,19 @@
+# Code Owners — LunarEC
+
+# Default: барлық PR-ді BekbolatBolebay қарайды
+* @BekbolatBolebay
+
+# TypeScript / Next.js UI
+apps/web/ @BekbolatBolebay
+
+# Rust Stock Engine
+crates/ @BekbolatBolebay
+
+# Go POS Gateway
+services/pos-gateway/ @BekbolatBolebay
+
+# Python AI Analytics
+services/ai-analytics/ @BekbolatBolebay
+
+# GitHub Workflows — CI/CD өзгерістерін міндетті тексеру
+.github/ @BekbolatBolebay
