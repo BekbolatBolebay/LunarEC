@@ -1,4 +1,4 @@
-name: LunarEC CI
+name: LunarEC Polyglot CI
 
 on:
   push:
@@ -7,25 +7,46 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  build-and-test:
-    name: 🚀 Build, Lint & Verify
+  # 1. TypeScript / Next.js
+  frontend-web:
+    name: 🌐 TypeScript & Next.js Build
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup Node.js 20.x
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+      - run: npm ci
+      - run: npm run build
 
-      - name: 📦 Install Dependencies
-        run: npm ci
+  # 2. Rust Core Engine
+  rust-core:
+    name: 🦀 Rust Stock & BOM Engine Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --manifest-path crates/stock-engine/Cargo.toml
 
-      - name: 🔨 Run Production Build
-        run: npm run build
+  # 3. Python AI & Analytics
+  python-analytics:
+    name: 🐍 Python AI Demand Forecasting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s services/ai-analytics
 
-      - name: ✅ Verification Complete
-        run: echo "🎉 LunarEC build passed successfully!"
+  # 4. Go POS Gateway
+  go-gateway:
+    name: 🐹 Go High-Speed POS Gateway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: cd services/pos-gateway && go test -v ./...

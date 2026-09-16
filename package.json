@@ -6,7 +6,8 @@
     "dev": "next dev -p 3005",
     "build": "next build",
     "start": "next start -p 3005",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:polyglot": "npm run build && cargo test --manifest-path crates/stock-engine/Cargo.toml && python3 -m unittest discover -s services/ai-analytics && cd services/pos-gateway && go test ./..."
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",

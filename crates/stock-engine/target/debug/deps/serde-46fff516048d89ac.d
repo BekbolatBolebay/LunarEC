@@ -1,0 +1,14 @@
+/home/parkman/Documents/CRM and ERP/crates/stock-engine/target/debug/deps/serde-46fff516048d89ac.d: /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /home/parkman/Documents/CRM\ and\ ERP/crates/stock-engine/target/debug/build/serde-bdd39c4b63fda8cf/out/private.rs
+
+/home/parkman/Documents/CRM and ERP/crates/stock-engine/target/debug/deps/libserde-46fff516048d89ac.rlib: /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /home/parkman/Documents/CRM\ and\ ERP/crates/stock-engine/target/debug/build/serde-bdd39c4b63fda8cf/out/private.rs
+
+/home/parkman/Documents/CRM and ERP/crates/stock-engine/target/debug/deps/libserde-46fff516048d89ac.rmeta: /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /home/parkman/Documents/CRM\ and\ ERP/crates/stock-engine/target/debug/build/serde-bdd39c4b63fda8cf/out/private.rs
+
+/home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs:
+/home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs:
+/home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs:
+/home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs:
+/home/parkman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs:
+/home/parkman/Documents/CRM\ and\ ERP/crates/stock-engine/target/debug/build/serde-bdd39c4b63fda8cf/out/private.rs:
+
+# env-dep:OUT_DIR=/home/parkman/Documents/CRM and ERP/crates/stock-engine/target/debug/build/serde-bdd39c4b63fda8cf/out
