@@ -108,3 +108,10 @@ LunarEC/
 
 MIT License © 2026 LunarNT Team.
 Барлық әзірлеушілер мен қауымдастық мүшелері өз үлесін қоса алады! 🚀
+
+### 🚀 Architecture Overview
+LunarEC uses an event-driven polyglot architecture:
+- Next.js Web Dashboard
+- Rust In-Memory FIFO/LIFO Engine
+- Go POS WebSocket Stream
+- Python Predictive Analytics
