@@ -5,15 +5,20 @@
   <a href="https://github.com/BekbolatBolebay/LunarEC/actions">
     <img src="https://img.shields.io/badge/CI%2FCD-4%20Pipelines%20Passing-brightgreen?style=for-the-badge&logo=github-actions" alt="CI" />
   </a>
+  <a href="https://github.com/BekbolatBolebay/LunarEC/stargazers">
+    <img src="https://img.shields.io/github/stars/BekbolatBolebay/LunarEC?style=for-the-badge&logo=apachespark&color=gold" alt="Stars" />
+  </a>
+  <a href="https://github.com/BekbolatBolebay/LunarEC/issues">
+    <img src="https://img.shields.io/github/issues/BekbolatBolebay/LunarEC?style=for-the-badge&color=orange" alt="Issues" />
+  </a>
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-Next.js%2014-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TypeScript-Next.js%2015-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Rust-Stock%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
   <img src="https://img.shields.io/badge/Go-POS%20Gateway-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
   <img src="https://img.shields.io/badge/Python-AI%20Analytics-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-  <img src="https://img.shields.io/badge/Architecture-Odoo%2017%2F18-714B67?style=for-the-badge" alt="Odoo" />
 </p>
 
 ---
