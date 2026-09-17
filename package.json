@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start -p 3005",
     "lint": "next lint",
-    "test:polyglot": "npm run build && cargo test --manifest-path crates/stock-engine/Cargo.toml && python3 -m unittest discover -s services/ai-analytics && cd services/pos-gateway && go test ./..."
+    "test:rust": "cargo test --manifest-path crates/stock-engine/Cargo.toml",
+    "test:go": "cd services/pos-gateway && go test ./...",
+    "test:python": "python3 -m unittest discover -s services/ai-analytics",
+    "test:all": "npm run test:rust && npm run test:go && npm run test:python && npm run build",
+    "test:polyglot": "npm run test:all"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",
