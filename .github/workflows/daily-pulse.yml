@@ -68,8 +68,8 @@ jobs:
 
       - name: Commit and push metrics
         run: |
-          git config --global user.name "LunarEC Bot"
-          git config --global user.email "lunar-bot@lunarec.dev"
+          git config --global user.name "BekbolatBolebay"
+          git config --global user.email "bolebay.bekbolat.25@gmail.com"
           git add .metrics/
           
           # Тек өзгеріс болса ғана commit
