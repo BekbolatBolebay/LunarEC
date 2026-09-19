@@ -7,3 +7,4 @@ pub mod supplier_po_engine;
 pub mod valuation;
 pub mod warehouse_partition;
 pub mod batch_expiry;
+pub mod recipe_scaler;
