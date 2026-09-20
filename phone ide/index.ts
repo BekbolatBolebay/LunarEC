@@ -1,0 +1,10 @@
+export * from './types';
+export * from './mockData';
+export * from './components/Header';
+export * from './components/BottomNav';
+export * from './components/EditorView';
+export * from './components/FileExplorerView';
+export * from './components/TerminalView';
+export * from './components/AiAssistantView';
+export * from './components/PhoneIde';
+export { PhoneIde as default } from './components/PhoneIde';
