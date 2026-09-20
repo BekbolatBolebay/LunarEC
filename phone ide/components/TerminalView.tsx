@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TerminalSession, TerminalLog } from '../types';
-import { Trash2, RotateCw, Columns, X } from 'lucide-react';
+import { Trash2, RotateCw, Columns, X, Plus } from 'lucide-react';
 
 interface TerminalViewProps {
   sessions: TerminalSession[];
@@ -10,6 +10,8 @@ interface TerminalViewProps {
   onSelectSession: (id: string) => void;
   onClearSession?: (id: string) => void;
   onRunCommand?: (cmd: string) => void;
+  onNewSession?: () => void;
+  onCloseSession?: (id: string) => void;
 }
 
 export const TerminalView: React.FC<TerminalViewProps> = ({
@@ -17,22 +19,43 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   activeSessionId,
   onSelectSession,
   onClearSession,
-  onRunCommand
+  onRunCommand,
+  onNewSession,
+  onCloseSession
 }) => {
   const [currentInput, setCurrentInput] = useState('');
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const scrollBottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
+
+  useEffect(() => {
+    scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeSession?.logs]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentInput.trim()) return;
+    const cmd = currentInput.trim();
+    if (!cmd) return;
+
+    setCommandHistory((prev) => [...prev, cmd]);
+    setHistoryIndex(-1);
+
     if (onRunCommand) {
-      onRunCommand(currentInput);
+      onRunCommand(cmd);
     }
     setCurrentInput('');
   };
 
   const insertKey = (token: string) => {
+    if (token === '^C') {
+      setCurrentInput('');
+      return;
+    }
     setCurrentInput((prev) => prev + token);
+    inputRef.current?.focus();
   };
 
   return (
@@ -58,31 +81,48 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                   }`}
                 />
                 <span className="truncate max-w-[120px]">{session.title}</span>
-                {isActive && (
-                  <button className="p-0.5 rounded hover:bg-[#30363d] text-[#8b949e] hover:text-white transition ml-0.5">
+                {sessions.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onCloseSession) onCloseSession(session.id);
+                    }}
+                    className="p-0.5 rounded hover:bg-[#30363d] text-[#8b949e] hover:text-white transition ml-0.5"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
             );
           })}
+
+          {/* Add session button */}
+          <button
+            onClick={onNewSession}
+            title="Жаңа терминал ашу"
+            className="p-1.5 ml-1 rounded hover:bg-[#161b22] text-[#8b949e] hover:text-white transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         <div className="flex items-center gap-1 py-1 shrink-0 text-[#8b949e]">
           <button
             onClick={() => onClearSession && onClearSession(activeSessionId)}
             className="p-1.5 rounded-lg hover:bg-[#21262d] hover:text-white transition"
-            title="Тазарту"
+            title="Тазарту (clear)"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
           <button
+            onClick={() => onRunCommand && onRunCommand('npm run dev')}
             className="p-1.5 rounded-lg hover:bg-[#21262d] hover:text-white transition"
-            title="Қайта жүктеу"
+            title="Қайта қосу"
           >
             <RotateCw className="w-3.5 h-3.5" />
           </button>
           <button
+            onClick={onNewSession}
             className="p-1.5 rounded-lg hover:bg-[#21262d] hover:text-white transition"
             title="Бөлу (Split)"
           >
@@ -92,26 +132,32 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       </div>
 
       {/* 2. Terminal Console Stream */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 text-xs text-[#e6edf3] selection:bg-[#264f78]">
+      <div
+        onClick={() => inputRef.current?.focus()}
+        className="flex-1 overflow-y-auto p-3 space-y-2.5 text-xs text-[#e6edf3] selection:bg-[#264f78] cursor-text"
+      >
         {activeSession.logs.map((log) => (
           <RenderTerminalLog key={log.id} log={log} />
         ))}
 
         {/* Active Input Line */}
         <form onSubmit={handleSend} className="flex items-center gap-2 pt-1">
-          <span className="text-[#58a6ff]">developer@codecraft</span>
+          <span className="text-[#58a6ff] whitespace-nowrap">developer@codecraft</span>
           <span className="text-[#8b949e]">:</span>
-          <span className="text-[#d2a8ff]">~/nexflow-api</span>
+          <span className="text-[#d2a8ff] whitespace-nowrap">{activeSession.cwd || '~/nexflow-api'}</span>
           <span className="text-[#3fb950] font-bold">$</span>
           <input
+            ref={inputRef}
             type="text"
             value={currentInput}
             onChange={(e) => setCurrentInput(e.target.value)}
-            placeholder="пәрменді енгізіңіз..."
+            placeholder="пәрмен жазыңыз (help, ls, npm run dev, git status)..."
             className="flex-1 bg-transparent text-[#f0f6fc] outline-none font-mono text-xs placeholder-[#484f58]"
           />
           <span className="w-2 h-4 bg-[#58a6ff] animate-pulse shrink-0" />
         </form>
+
+        <div ref={scrollBottomRef} />
       </div>
 
       {/* 3. System Metrics Bar */}
@@ -134,14 +180,25 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
       {/* 4. Terminal Mobile Keyboard Shortcuts Bar */}
       <div className="flex items-center gap-1.5 px-2 py-1.5 bg-[#161b22] border-t border-[#30363d] overflow-x-auto no-scrollbar shrink-0">
-        {['Ctrl', 'Esc', 'Tab', '|', '~', '/', '-', '&&', 'sudo', 'c'].map((k) => (
+        {[
+          { key: 'Ctrl', val: '^C' },
+          { key: 'Esc', val: '' },
+          { key: 'Tab', val: '  ' },
+          { key: '|', val: ' | ' },
+          { key: '~', val: '~' },
+          { key: '/', val: '/' },
+          { key: '-', val: '-' },
+          { key: '&&', val: ' && ' },
+          { key: 'sudo', val: 'sudo ' },
+          { key: 'clear', val: 'clear' }
+        ].map((item) => (
           <button
-            key={k}
+            key={item.key}
             type="button"
-            onClick={() => insertKey(k === 'Tab' ? '  ' : k === 'Ctrl' ? '^C' : k + ' ')}
+            onClick={() => insertKey(item.val)}
             className="px-2.5 h-8 rounded-lg bg-[#21262d] active:bg-[#30363d] text-gray-200 text-xs font-semibold flex items-center justify-center shrink-0 border border-[#30363d] transition active:scale-95"
           >
-            {k}
+            {item.key}
           </button>
         ))}
       </div>
@@ -155,11 +212,10 @@ const RenderTerminalLog: React.FC<{ log: TerminalLog }> = ({ log }) => {
       return <div className="text-[#8b949e] whitespace-pre-line">{log.text}</div>;
 
     case 'cmd':
-      return (
-        <div className="text-white font-semibold">
-          {log.text}
-        </div>
-      );
+      return <div className="text-white font-semibold">{log.text}</div>;
+
+    case 'error':
+      return <div className="text-[#f85149] font-mono">{log.text}</div>;
 
     case 'badge-success':
       return (

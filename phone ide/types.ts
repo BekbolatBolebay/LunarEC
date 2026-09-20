@@ -5,7 +5,7 @@ export interface FileItem {
   name: string;
   path: string;
   type: 'file' | 'folder';
-  extension?: 'ts' | 'json' | 'md' | 'env' | 'js';
+  extension?: 'ts' | 'json' | 'md' | 'env' | 'js' | 'css' | 'html' | 'rs';
   status?: 'M' | 'U' | 'checked' | 'none';
   childrenCount?: number;
   content?: string;
@@ -31,6 +31,7 @@ export interface TerminalLog {
 export interface TerminalSession {
   id: string;
   title: string;
+  cwd: string;
   logs: TerminalLog[];
 }
 
@@ -39,6 +40,7 @@ export interface AiChatMessage {
   sender: 'user' | 'ai';
   text: string;
   timestamp: string;
+  model?: string;
   contextSnippet?: {
     file: string;
     lines: string;
@@ -50,4 +52,12 @@ export interface AiChatMessage {
   };
   highlights?: string[];
   metrics?: string;
+}
+
+export interface GitCommitRecord {
+  hash: string;
+  message: string;
+  author: string;
+  time: string;
+  filesChanged: number;
 }

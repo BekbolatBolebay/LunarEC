@@ -24,6 +24,7 @@ export const PhoneIde: React.FC = () => {
   const [files, setFiles] = useState<FileItem[]>(initialFiles);
   const [tabs, setTabs] = useState<EditorTab[]>(initialTabs);
   const [activeTabId, setActiveTabId] = useState<string>('server-ts');
+  const [activeFilePath, setActiveFilePath] = useState<string>('src/api/controllers/server.ts');
   const [editorCode, setEditorCode] = useState<string>(
     initialFiles[0]?.children?.[0]?.children?.[0]?.children?.[0]?.content || ''
   );
@@ -33,7 +34,32 @@ export const PhoneIde: React.FC = () => {
   const [activeTerminalId, setActiveTerminalId] = useState<string>('1');
   const [aiMessages, setAiMessages] = useState<AiChatMessage[]>(initialAiMessages);
 
-  // Handler: Select file in File Explorer
+  // Find file recursively
+  const findFileById = (items: FileItem[], id: string): FileItem | undefined => {
+    for (const item of items) {
+      if (item.id === id) return item;
+      if (item.children) {
+        const found = findFileById(item.children, id);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
+  // Update file content in files tree recursively
+  const updateFileContent = (items: FileItem[], id: string, newContent: string): FileItem[] => {
+    return items.map((item) => {
+      if (item.id === id) {
+        return { ...item, content: newContent, status: 'M' };
+      }
+      if (item.children) {
+        return { ...item, children: updateFileContent(item.children, id, newContent) };
+      }
+      return item;
+    });
+  };
+
+  // Select file in Explorer -> open tab & load code
   const handleSelectFile = (file: FileItem) => {
     if (file.type === 'file') {
       const existingTab = tabs.find((t) => t.id === file.id);
@@ -47,32 +73,23 @@ export const PhoneIde: React.FC = () => {
         setTabs([...tabs, newTab]);
       }
       setActiveTabId(file.id);
-      if (file.content) {
-        setEditorCode(file.content);
-      }
+      setActiveFilePath(file.path);
+      setEditorCode(file.content || `// ${file.name}\n`);
       setCurrentView('editor');
     }
   };
 
-  // Handler: Tab select & close
+  // Select tab
   const handleSelectTab = (id: string) => {
     setActiveTabId(id);
-    const findFile = (items: FileItem[]): FileItem | undefined => {
-      for (const item of items) {
-        if (item.id === id) return item;
-        if (item.children) {
-          const res = findFile(item.children);
-          if (res) return res;
-        }
-      }
-      return undefined;
-    };
-    const targetFile = findFile(files);
-    if (targetFile && targetFile.content) {
-      setEditorCode(targetFile.content);
+    const targetFile = findFileById(files, id);
+    if (targetFile) {
+      setActiveFilePath(targetFile.path);
+      setEditorCode(targetFile.content || '');
     }
   };
 
+  // Close tab
   const handleCloseTab = (id: string) => {
     const updated = tabs.filter((t) => t.id !== id);
     setTabs(updated);
@@ -81,36 +98,46 @@ export const PhoneIde: React.FC = () => {
     }
   };
 
-  // Handler: Run Project (Play button in top bar)
-  const handleRunProject = () => {
-    setCurrentView('terminal');
-    const newLog = {
-      id: 'run-' + Date.now(),
-      type: 'badge-success' as const,
-      text: 'Жоба сәтті іске қосылды: http://localhost:8080 (Hot Reload белсенді)'
-    };
-    setTerminalSessions((prev) =>
-      prev.map((s) =>
-        s.id === '1' ? { ...s, logs: [...s.logs, newLog] } : s
-      )
+  // Editor code change
+  const handleCodeChange = (newCode: string) => {
+    setEditorCode(newCode);
+    setFiles((prev) => updateFileContent(prev, activeTabId, newCode));
+    setTabs((prev) =>
+      prev.map((t) => (t.id === activeTabId ? { ...t, isDirty: true } : t))
     );
   };
 
-  // Handler: Run custom terminal command
-  const handleRunCommand = (cmd: string) => {
-    const isGit = cmd.startsWith('git');
+  // Save current file
+  const handleSaveFile = () => {
+    setTabs((prev) =>
+      prev.map((t) => (t.id === activeTabId ? { ...t, isDirty: false } : t))
+    );
+  };
+
+  // Top bar Run Button
+  const handleRunProject = () => {
+    setCurrentView('terminal');
     const newLogs = [
       {
-        id: 'c1-' + Date.now(),
+        id: 'run-cmd-' + Date.now(),
         type: 'cmd' as const,
-        text: `developer@codecraft : ~/nexflow-api $ ${cmd}`
+        text: 'developer@codecraft : ~/nexflow-api $ npm run dev'
       },
       {
-        id: 'c2-' + Date.now(),
-        type: isGit ? ('badge-db' as const) : ('badge-success' as const),
-        text: isGit
-          ? 'Git өзгерістері өңделді: On branch main. Nothing to commit, working tree clean.'
-          : `Пәрмен орындалды: ${cmd} (0 қателік)`
+        id: 'run-succ-' + Date.now(),
+        type: 'badge-success' as const,
+        text: 'Сервер қосылды: http://localhost:8080 (Hot Reload белсенді)'
+      },
+      {
+        id: 'run-http-' + Date.now(),
+        type: 'http' as const,
+        data: {
+          method: 'GET',
+          path: '/api/v1/health',
+          status: '200 OK',
+          time: '4ms',
+          ip: '127.0.0.1'
+        }
       }
     ];
 
@@ -121,47 +148,208 @@ export const PhoneIde: React.FC = () => {
     );
   };
 
-  // Handler: AI message send
-  const handleSendAiMessage = (text: string) => {
+  // Run terminal command emulator
+  const handleRunCommand = (rawCmd: string) => {
+    const cmd = rawCmd.trim();
+    const isGit = cmd.startsWith('git');
+    const isLs = cmd === 'ls' || cmd === 'dir';
+    const isClear = cmd === 'clear' || cmd === 'cls';
+    const isHelp = cmd === 'help' || cmd === '?';
+    const isNpm = cmd.startsWith('npm');
+
+    if (isClear) {
+      setTerminalSessions((prev) =>
+        prev.map((s) => (s.id === activeTerminalId ? { ...s, logs: [] } : s))
+      );
+      return;
+    }
+
+    let resultLog: any = {
+      id: 'res-' + Date.now(),
+      type: 'info' as const,
+      text: `Пәрмен орындалды: ${cmd}`
+    };
+
+    if (isHelp) {
+      resultLog = {
+        id: 'res-' + Date.now(),
+        type: 'info' as const,
+        text: `Қолжетімді пәрмендер:\n • npm run dev | npm run build | npm test\n • git status | git commit -m "..." | git log | git push\n • ls | cat <файл> | clear | curl <url> | whoami | node -v`
+      };
+    } else if (isLs) {
+      resultLog = {
+        id: 'res-' + Date.now(),
+        type: 'info' as const,
+        text: `src/   package.json   tsconfig.json   .env.local   README.md`
+      };
+    } else if (cmd.startsWith('cat')) {
+      const targetName = cmd.split(' ')[1] || 'server.ts';
+      resultLog = {
+        id: 'res-' + Date.now(),
+        type: 'info' as const,
+        text: `=== ${targetName} ===\n` + editorCode.slice(0, 300) + '...'
+      };
+    } else if (isGit) {
+      if (cmd.includes('commit')) {
+        resultLog = {
+          id: 'res-' + Date.now(),
+          type: 'badge-db' as const,
+          text: `[main ${Math.random().toString(36).substring(2, 9)}] ${cmd.replace('git commit -m', '').replace(/"/g, '') || 'update changes'}\n 3 files changed, +142 insertions(+), -28 deletions(-)`
+        };
+      } else if (cmd.includes('push')) {
+        resultLog = {
+          id: 'res-' + Date.now(),
+          type: 'badge-success' as const,
+          text: `To github.com:BekbolatBolebay/LunarEC.git\n   main -> main [СӘТТІ / PUSHED]`
+        };
+      } else {
+        resultLog = {
+          id: 'res-' + Date.now(),
+          type: 'badge-db' as const,
+          text: `On branch main\nChanges not staged for commit:\n  modified: src/api/controllers/server.ts\n  modified: package.json\nUntracked files:\n  .env.local`
+        };
+      }
+    } else if (isNpm) {
+      if (cmd.includes('build')) {
+        resultLog = {
+          id: 'res-' + Date.now(),
+          type: 'badge-success' as const,
+          text: `✓ Compiled 24 modules successfully in 1.2s! (0 errors, 0 warnings)`
+        };
+      } else if (cmd.includes('test')) {
+        resultLog = {
+          id: 'res-' + Date.now(),
+          type: 'badge-success' as const,
+          text: `PASS src/api/controllers/server.test.ts\n Tests: 8 passed, 8 total\n Time: 0.94s`
+        };
+      } else {
+        resultLog = {
+          id: 'res-' + Date.now(),
+          type: 'badge-success' as const,
+          text: `[СӘТТІ / SUCCESS] Сервер қосылды: http://localhost:8080 (Hot Reload белсенді)`
+        };
+      }
+    } else if (cmd === 'whoami') {
+      resultLog = {
+        id: 'res-' + Date.now(),
+        type: 'info' as const,
+        text: 'developer@codecraft (Lead Cloud Architect)'
+      };
+    } else if (cmd.startsWith('node')) {
+      resultLog = {
+        id: 'res-' + Date.now(),
+        type: 'info' as const,
+        text: 'v20.18.0 (ARM64 linux)'
+      };
+    }
+
+    const newLogs = [
+      {
+        id: 'cmd-' + Date.now(),
+        type: 'cmd' as const,
+        text: `developer@codecraft : ~/nexflow-api $ ${cmd}`
+      },
+      resultLog
+    ];
+
+    setTerminalSessions((prev) =>
+      prev.map((s) =>
+        s.id === activeTerminalId ? { ...s, logs: [...s.logs, ...newLogs] } : s
+      )
+    );
+  };
+
+  // Add new terminal session
+  const handleNewTerminalSession = () => {
+    const newId = String(terminalSessions.length + 1);
+    const newSession: TerminalSession = {
+      id: newId,
+      title: `${newId}: zsh (bash)`,
+      cwd: '~/nexflow-api',
+      logs: [
+        {
+          id: 'init-' + Date.now(),
+          type: 'info',
+          text: 'CodeCraft POSIX tty session started • Type "help" for commands.'
+        }
+      ]
+    };
+    setTerminalSessions([...terminalSessions, newSession]);
+    setActiveTerminalId(newId);
+  };
+
+  // Close terminal session
+  const handleCloseTerminalSession = (id: string) => {
+    if (terminalSessions.length <= 1) return;
+    const remaining = terminalSessions.filter((s) => s.id !== id);
+    setTerminalSessions(remaining);
+    if (activeTerminalId === id) {
+      setActiveTerminalId(remaining[0].id);
+    }
+  };
+
+  // Send AI Message
+  const handleSendAiMessage = (userText: string) => {
     const userMsg: AiChatMessage = {
       id: 'usr-' + Date.now(),
       sender: 'user',
-      text,
+      text: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     setAiMessages((prev) => [...prev, userMsg]);
 
     setTimeout(() => {
+      let aiCode = `// Fastify оңтайландырылған маршрут\nexport const deployHandler = async (req: FastifyRequest, reply: FastifyReply) => {\n  const { clusterTarget } = req.body as any;\n  const cluster = await db.nodes.findUnique({ where: { id: clusterTarget } });\n  return reply.status(200).send({ success: true, cluster });\n};`;
+      let explanation = `"${userText}" бойынша код тексерілді. Төменде оңтайландырылған және қауіпсіз нұсқасын ұсынамын:`;
+      let points = [
+        'TypeScript типтеу қателері толықтай реттелді.',
+        'Дерекқор сұрауы оңтайландырылып, жауап қайтару жылдамдығы 2.4 есе артты.'
+      ];
+
+      if (userText.includes('түсіндір') || userText.includes('логика')) {
+        explanation = `"${activeFilePath}" файлы Fastify фреймворкіндегі басты API контроллері қызметін атқарады. Мұнда JWT токендерін тексеру, clusterTarget арқылы микросервис кластерлерін іске қосу және EventBus оқиғаларын тарату орындалады.`;
+        points = [
+          'FastifyReply және FastifyRequest арқылы клиент сұраныстары өңделеді.',
+          'db.nodes және db.events модулі арқылы инфрақұрылымдық түйіндер басқарылады.'
+        ];
+      } else if (userText.includes('қате') || userText.includes('тап')) {
+        explanation = `Кодта 1 ықтимал типтеу ескертуі табылды: "clusterTarget" қасиеті FastifyBody типінде міндетті емес ретінде көрсетілгендіктен, (req.body as any) немесе Generic Interface арқылы қауіпсіздендіру ұсынылады.`;
+        points = [
+          '401 Unauthorized жауабы токен болмаған жағдайда нақты қайтарылады.',
+          'Try/catch блогындағы 500 ішкі қателік қазақша қателік хабарламасымен жабдықталған.'
+        ];
+      }
+
       const aiReply: AiChatMessage = {
         id: 'ai-' + Date.now(),
         sender: 'ai',
-        text: `"${text}" сұрағыңыз бойынша код сарапталды. Оңтайландырылған нұсқаны төменде ұсынамын:`,
+        text: explanation,
         timestamp: 'жаңа ғана',
         codeBlock: {
-          fileName: 'server.ts',
+          fileName: activeFilePath.split('/').pop() || 'server.ts',
           language: 'TypeScript',
-          code: `// Fastify оңтайландырылған маршрут\nexport const optimizedHandler = async (req, reply) => {\n  return reply.send({ success: true, timestamp: Date.now() });\n};`
+          code: aiCode
         },
-        highlights: [
-          'Жадты үнемдеу және асинхронды өңдеу жақсартылды.',
-          'Қауіпсіздік тексеруі толықтай қосылды.'
-        ],
-        metrics: '142 tokens • 0.9s'
+        highlights: points,
+        metrics: '196 tokens • 0.8s'
       };
       setAiMessages((prev) => [...prev, aiReply]);
-    }, 800);
+    }, 600);
   };
 
-  // Handler: Apply AI code into editor
-  const handleApplyAiCode = (code: string) => {
-    setEditorCode((prev) => prev + '\n\n' + code);
+  // Apply AI Code to Editor
+  const handleApplyAiCode = (codeToInsert: string) => {
+    const updated = editorCode + '\n\n' + codeToInsert;
+    handleCodeChange(updated);
     setCurrentView('editor');
   };
 
+  const activeFileName = activeFilePath.split('/').pop() || 'server.ts';
+
   return (
     <div className="min-h-screen bg-[#030712] text-white flex flex-col items-center justify-center p-0 md:p-6 font-sans">
-      {/* Top Toggle Switch (Preview Frame vs Fullscreen) on Desktop */}
+      {/* Top Toggle Switch on Desktop */}
       <div className="hidden md:flex items-center gap-3 mb-4 bg-[#0d1117] border border-[#30363d] px-4 py-2 rounded-2xl shadow-xl">
         <span className="text-xs text-gray-400 font-mono">Қарау режимі:</span>
         <button
@@ -196,7 +384,7 @@ export const PhoneIde: React.FC = () => {
             : 'w-full h-screen md:h-[90vh] md:max-w-5xl md:rounded-2xl md:border md:border-[#30363d]'
         }`}
       >
-        {/* Dynamic Island / Speaker notch on Phone Frame */}
+        {/* Dynamic Island on Phone Frame */}
         {isPhoneFrame && (
           <div className="hidden md:flex justify-center pt-2.5 pb-1 bg-[#0d1117] select-none shrink-0">
             <div className="w-24 h-4 bg-black rounded-full ring-1 ring-white/10 flex items-center justify-center">
@@ -222,8 +410,10 @@ export const PhoneIde: React.FC = () => {
               onSelectTab={handleSelectTab}
               onCloseTab={handleCloseTab}
               code={editorCode}
-              onChangeCode={setEditorCode}
+              onChangeCode={handleCodeChange}
               onOpenQuickFix={() => setCurrentView('ai')}
+              activeFilePath={activeFilePath}
+              onSave={handleSaveFile}
             />
           )}
 
@@ -232,9 +422,12 @@ export const PhoneIde: React.FC = () => {
               files={files}
               onSelectFile={handleSelectFile}
               activeFileId={activeTabId}
-              onCommit={() => {
+              onCommitSuccess={(msg) => {
                 setCurrentView('terminal');
-                handleRunCommand('git commit -m "feat(api): optimize fastify cluster deployment"');
+                handleRunCommand(`git commit -m "${msg}"`);
+              }}
+              onCreateFile={(name) => {
+                handleRunCommand(`touch src/${name}`);
               }}
             />
           )}
@@ -250,6 +443,8 @@ export const PhoneIde: React.FC = () => {
                 );
               }}
               onRunCommand={handleRunCommand}
+              onNewSession={handleNewTerminalSession}
+              onCloseSession={handleCloseTerminalSession}
             />
           )}
 
@@ -259,6 +454,8 @@ export const PhoneIde: React.FC = () => {
               onSendMessage={handleSendAiMessage}
               onApplyCode={handleApplyAiCode}
               onClearHistory={() => setAiMessages([])}
+              activeFileName={activeFileName}
+              activeCode={editorCode}
             />
           )}
         </main>

@@ -31,8 +31,8 @@ export const initialFiles: FileItem[] = [
                 extension: 'ts',
                 status: 'M',
                 content: `import fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import { verifyJWT } from './middlewares/auth';
-import { db } from '../database';
+import { verifyJWT } from '../middleware/auth';
+import { db } from '../../config/database';
 
 // Басты API қолданбасын инициализациялау
 export const app = fastify({ logger: true });
@@ -44,16 +44,20 @@ app.post('/api/v1/deploy', async (req: FastifyRequest, reply: FastifyReply) => {
       return reply.status(401).send({ error: 'Рұқсат берілмеген' });
     }
     const session = await verifyJWT(token);
-    const clusterId = req.body.clusterTarget;
+    const clusterId = (req.body as any)?.clusterTarget;
     const cluster = await db.nodes.findUnique({
       where: { id: clusterId, tenantId: session.tenantId }
     });
     await db.events.emit(clusterId);
-    return reply.status(202).send({ status: 'node: cluster' });
+    return reply.status(202).send({ status: 'node: cluster', cluster });
   } catch (err) {
     req.log.error(err);
     return reply.status(500).send({ қателік: 'Серверде қате орын алды' });
   }
+});
+
+app.get('/api/v1/health', async (req, reply) => {
+  return reply.send({ status: 'ok', uptime: process.uptime() });
 });`
               },
               {
@@ -64,15 +68,21 @@ app.post('/api/v1/deploy', async (req: FastifyRequest, reply: FastifyReply) => {
                 extension: 'ts',
                 status: 'checked',
                 content: `import { FastifyRequest, FastifyReply } from 'fastify';
-import { signJWT } from '../utils/jwt';
+import { signJWT, verifyCredentials } from '../middleware/auth';
 
 export async function loginHandler(req: FastifyRequest, reply: FastifyReply) {
   const { email, password } = req.body as any;
   if (!email || !password) {
     return reply.status(400).send({ message: 'Email мен пароль міндетті' });
   }
-  const token = await signJWT({ email });
-  return reply.send({ token, success: true });
+  
+  const user = await verifyCredentials(email, password);
+  if (!user) {
+    return reply.status(401).send({ message: 'Қате логин немесе пароль' });
+  }
+
+  const token = await signJWT({ id: user.id, email: user.email, role: user.role });
+  return reply.send({ token, user, success: true });
 }`
               },
               {
@@ -82,9 +92,11 @@ export async function loginHandler(req: FastifyRequest, reply: FastifyReply) {
                 type: 'file',
                 extension: 'ts',
                 content: `import { FastifyRequest, FastifyReply } from 'fastify';
+import { db } from '../../config/database';
 
 export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
-  return reply.send({ id: 1, name: 'Bekbolat', role: 'Lead Architect' });
+  const user = await db.nodes.findUnique({ where: { id: 'usr-101' } });
+  return reply.send({ id: 1, name: 'Bekbolat Bolebay', role: 'Lead Architect', user });
 }`
               }
             ]
@@ -102,7 +114,21 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
                 name: 'auth.ts',
                 path: 'src/api/middleware/auth.ts',
                 type: 'file',
-                extension: 'ts'
+                extension: 'ts',
+                content: `export async function verifyJWT(token: string) {
+  if (token === 'valid_secret_token') {
+    return { tenantId: 'tenant_001', userId: 'usr_77' };
+  }
+  return { tenantId: 'default_tenant', userId: 'usr_guest' };
+}
+
+export async function signJWT(payload: any) {
+  return 'jwt_' + Buffer.from(JSON.stringify(payload)).toString('base64');
+}
+
+export async function verifyCredentials(e: string, p: string) {
+  return { id: 'usr_77', email: e, role: 'admin' };
+}`
               }
             ]
           },
@@ -119,7 +145,15 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
                 name: 'index.ts',
                 path: 'src/api/routes/index.ts',
                 type: 'file',
-                extension: 'ts'
+                extension: 'ts',
+                content: `import { FastifyInstance } from 'fastify';
+import { loginHandler } from '../controllers/auth.controller';
+import { getProfile } from '../controllers/user.controller';
+
+export async function apiRoutes(server: FastifyInstance) {
+  server.post('/auth/login', loginHandler);
+  server.get('/user/profile', getProfile);
+}`
               }
             ]
           }
@@ -140,10 +174,18 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
             extension: 'ts',
             content: `export const db = {
   nodes: {
-    findUnique: async (args: any) => ({ id: args.where.id, ready: true })
+    findUnique: async (args: any) => ({
+      id: args.where.id || 'node_primary',
+      ready: true,
+      region: 'kz-almaty-1',
+      cluster: 'prod-pool'
+    })
   },
   events: {
-    emit: async (name: string) => console.log('Event emitted:', name)
+    emit: async (name: string) => {
+      console.log('🚀 [EventBus] Оқиға таратылды:', name);
+      return true;
+    }
   }
 };`
           },
@@ -155,7 +197,9 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
             extension: 'ts',
             content: `export const env = {
   PORT: process.env.PORT || 8080,
-  SECRET: process.env.SECRET || 'secret_key'
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  SECRET: process.env.SECRET || 'secret_super_key_2026',
+  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://dev:pass@localhost:5432/nexflow'
 };`
           }
         ]
@@ -172,9 +216,17 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
     content: `{
   "name": "nexflow-api",
   "version": "1.0.0",
-  "main": "src/server.ts",
+  "private": true,
   "scripts": {
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/api/controllers/server.ts",
+    "build": "tsc -p .",
+    "start": "node dist/server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "fastify": "^4.26.2",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.5"
   }
 }`
   },
@@ -183,7 +235,17 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
     name: 'tsconfig.json',
     path: 'tsconfig.json',
     type: 'file',
-    extension: 'json'
+    extension: 'json',
+    content: `{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}`
   },
   {
     id: 'env-local',
@@ -191,14 +253,31 @@ export async function getProfile(req: FastifyRequest, reply: FastifyReply) {
     path: '.env.local',
     type: 'file',
     extension: 'env',
-    status: 'U'
+    status: 'U',
+    content: `PORT=8080
+NODE_ENV=development
+SECRET=nexflow_secret_token_9934
+DATABASE_URL=postgresql://developer:pass123@localhost:5432/nexflow_db`
   },
   {
     id: 'readme-md',
     name: 'README.md',
     path: 'README.md',
     type: 'file',
-    extension: 'md'
+    extension: 'md',
+    content: `# Nexflow API - Mobile Cloud IDE
+
+Бұл жоба мобильді құрылғылардан бұлттық микросервистерді әзірлеу, тестілеу және басқару үшін жасалған.
+
+## Жылдам іске қосу:
+\`\`\`bash
+npm run dev
+\`\`\`
+
+## Мүмкіндіктер:
+- Fastify негізіндегі өте жылдам REST API
+- Интерактивті DevCopilot AI көмекшісі
+- Кіріктірілген ZSH терминалы мен Git басқаруы`
   }
 ];
 
@@ -230,6 +309,7 @@ export const initialTerminalSessions: TerminalSession[] = [
   {
     id: '1',
     title: '1: zsh (node)',
+    cwd: '~/nexflow-api',
     logs: [
       {
         id: 'l1',
@@ -244,7 +324,7 @@ export const initialTerminalSessions: TerminalSession[] = [
       {
         id: 'l3',
         type: 'info',
-        text: '> nexflow-api@1.0.0 dev\n> tsx watch src/server.ts'
+        text: '> nexflow-api@1.0.0 dev\n> tsx watch src/api/controllers/server.ts'
       },
       {
         id: 'l4',
@@ -294,17 +374,13 @@ export const initialTerminalSessions: TerminalSession[] = [
             деректер_көлемі: 1420
           }
         }
-      },
-      {
-        id: 'l10',
-        type: 'cmd',
-        text: 'developer@codecraft : ~/nexflow-api $ git status'
       }
     ]
   },
   {
     id: '2',
     title: '2: npm run dev',
+    cwd: '~/nexflow-api',
     logs: [
       {
         id: 'l2-1',
@@ -314,13 +390,14 @@ export const initialTerminalSessions: TerminalSession[] = [
       {
         id: 'l2-2',
         type: 'badge-success',
-        text: 'Build successfully completed in 1.4s!'
+        text: 'Build successfully completed in 1.4s! (0 errors, 0 warnings)'
       }
     ]
   },
   {
     id: '3',
     title: '3: docker-compose',
+    cwd: '~/nexflow-api',
     logs: [
       {
         id: 'l3-1',
@@ -330,7 +407,12 @@ export const initialTerminalSessions: TerminalSession[] = [
       {
         id: 'l3-2',
         type: 'badge-db',
-        text: 'Container nexflow_postgres Started (Healthy)'
+        text: 'Container nexflow_postgres Started (Healthy, port 5432)'
+      },
+      {
+        id: 'l3-3',
+        type: 'badge-success',
+        text: 'Container nexflow_redis Started (Healthy, port 6379)'
       }
     ]
   }
@@ -355,7 +437,7 @@ export const initialAiMessages: AiChatMessage[] = [
     codeBlock: {
       fileName: 'server.ts',
       language: 'TypeScript',
-      code: `export const verifyToken = (req, res, next) => {
+      code: `export const verifyToken = (req: any, res: any, next: any) => {
   try {
     const auth = req.headers['authorization'];
     const token = auth?.split(' ')[1];
@@ -363,9 +445,9 @@ export const initialAiMessages: AiChatMessage[] = [
     return next();
   } catch (err: any) {
     if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ code: 'EXPIRED' });
+      return res.status(401).json({ code: 'EXPIRED', message: 'Токен мерзімі аяқталды' });
     }
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(403).json({ error: 'Жарамсыз токен' });
   }
 };`
     },
