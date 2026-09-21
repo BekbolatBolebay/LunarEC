@@ -42,7 +42,14 @@ export const FileExplorerView: React.FC<FileExplorerViewProps> = ({
   const [showNewFileModal, setShowNewFileModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [showCommitModal, setShowCommitModal] = useState(false);
-  const [commitMessage, setCommitMessage] = useState('feat(api): update cluster deploy endpoint');
+  const [commitMessage, setCommitMessage] = useState('feat: update changes from mobile IDE');
+
+  // Keep treeData in sync when files prop updates from real API
+  React.useEffect(() => {
+    if (files && files.length > 0) {
+      setTreeData(files);
+    }
+  }, [files]);
 
   // Toggle folder
   const toggleFolder = (folderId: string) => {
