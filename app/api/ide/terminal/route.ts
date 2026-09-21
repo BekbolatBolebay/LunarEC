@@ -55,17 +55,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Run command in child_process
+    // Run command in child_process with PATH enriched for agy CLI
     const startTime = Date.now();
+    const customPath = `${process.env.HOME}/.local/bin:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`;
+
     return new Promise<NextResponse>((resolve) => {
       exec(
         trimmedCmd,
         {
           cwd: effectiveCwd,
-          timeout: 25000,
+          timeout: 45000,
           maxBuffer: 1024 * 1024 * 5, // 5MB buffer
           env: {
             ...process.env,
+            PATH: customPath,
             PAGER: 'cat',
             FORCE_COLOR: '1'
           }

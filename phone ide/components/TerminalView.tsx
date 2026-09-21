@@ -151,7 +151,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
             type="text"
             value={currentInput}
             onChange={(e) => setCurrentInput(e.target.value)}
-            placeholder="пәрмен жазыңыз (help, ls, npm run dev, git status)..."
+            placeholder="пәрмен жазыңыз (agy --version, help, ls, npm run dev, git status)..."
             className="flex-1 bg-transparent text-[#f0f6fc] outline-none font-mono text-xs placeholder-[#484f58]"
           />
           <span className="w-2 h-4 bg-[#58a6ff] animate-pulse shrink-0" />
@@ -171,9 +171,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span>Пакет: <strong className="text-white font-normal">main</strong></span>
-          <span className="text-[#58a6ff] flex items-center gap-1 font-medium">
-            ⬇ Авто
+          <span className="text-[#d2a8ff] flex items-center gap-1 font-medium">
+            ✨ agy CLI v1.1
           </span>
         </div>
       </div>
@@ -181,22 +180,25 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       {/* 4. Terminal Mobile Keyboard Shortcuts Bar */}
       <div className="flex items-center gap-1.5 px-2 py-1.5 bg-[#161b22] border-t border-[#30363d] overflow-x-auto no-scrollbar shrink-0">
         {[
+          { key: 'agy', val: 'agy --help' },
           { key: 'Ctrl', val: '^C' },
-          { key: 'Esc', val: '' },
           { key: 'Tab', val: '  ' },
           { key: '|', val: ' | ' },
           { key: '~', val: '~' },
           { key: '/', val: '/' },
           { key: '-', val: '-' },
-          { key: '&&', val: ' && ' },
-          { key: 'sudo', val: 'sudo ' },
+          { key: 'git', val: 'git status' },
           { key: 'clear', val: 'clear' }
         ].map((item) => (
           <button
             key={item.key}
             type="button"
             onClick={() => insertKey(item.val)}
-            className="px-2.5 h-8 rounded-lg bg-[#21262d] active:bg-[#30363d] text-gray-200 text-xs font-semibold flex items-center justify-center shrink-0 border border-[#30363d] transition active:scale-95"
+            className={`px-2.5 h-8 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 border border-[#30363d] transition active:scale-95 ${
+              item.key === 'agy'
+                ? 'bg-purple-600/30 text-[#d2a8ff] border-purple-500/50'
+                : 'bg-[#21262d] active:bg-[#30363d] text-gray-200'
+            }`}
           >
             {item.key}
           </button>

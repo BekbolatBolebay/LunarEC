@@ -44,7 +44,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
   activeCode = ''
 }) => {
   const [inputText, setInputText] = useState('');
-  const [selectedModel, setSelectedModel] = useState('Claude 3.5 Sonnet');
+  const [selectedModel, setSelectedModel] = useState('Antigravity CLI (agy)');
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [appliedId, setAppliedId] = useState<string | null>(null);
@@ -54,8 +54,9 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const models = [
+    { name: 'Antigravity CLI (agy)', desc: 'Google • Жүйелік POSIX агенті (v1.1.11)' },
+    { name: 'Antigravity 2.0 (Gemini 1.5)', desc: 'Google • 2M Context терең сараптама' },
     { name: 'Claude 3.5 Sonnet', desc: 'Anthropic • Ең жылдам әрі дәл' },
-    { name: 'Gemini 1.5 Pro', desc: 'Google • 2M Context терең сараптама' },
     { name: 'GPT-4o Dev', desc: 'OpenAI • Рефакторингке арналған' }
   ];
 
