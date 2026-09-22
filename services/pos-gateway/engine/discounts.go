@@ -11,9 +11,9 @@ import (
 type DiscountType string
 
 const (
-	DiscountPercent  DiscountType = "percentage"
-	DiscountFixed    DiscountType = "fixed_amount"
-	DiscountLoyalty  DiscountType = "loyalty_points"
+	DiscountPercent DiscountType = "percentage"
+	DiscountFixed   DiscountType = "fixed_amount"
+	DiscountLoyalty DiscountType = "loyalty_points"
 )
 
 type PromoRule struct {
@@ -22,7 +22,7 @@ type PromoRule struct {
 	Value            float64      `json:"value"` // e.g. 20 for 20%, or 2000 for 2000 KZT
 	MinOrderAmount   float64      `json:"min_order_amount"`
 	MaxDiscountLimit float64      `json:"max_discount_limit"`
-	ExpiresAt        time.Time    `json:"expires_at"`
+	ExpiresAt        time.Time    `json:"expires_at"` // Zero time = never expires
 	IsActive         bool         `json:"is_active"`
 }
 
@@ -46,32 +46,48 @@ func (de *DiscountEngine) ApplyPromo(order *models.Order, code string) (float64,
 		return 0, errors.New("жарамсыз немесе белсенді емес промокод")
 	}
 
-	if time.Now().After(rule.ExpiresAt) {
+	// Only check expiration if ExpiresAt is explicitly configured
+	if !rule.ExpiresAt.IsZero() && time.Now().After(rule.ExpiresAt) {
 		return 0, errors.New("промокодтың қолданылу мерзімі өткен")
 	}
 
 	order.RecalculateTotal()
-	if order.TotalAmount < rule.MinOrderAmount {
+	if order.GrossAmount < rule.MinOrderAmount {
 		return 0, errors.New("тапсырыс сомасы промокодтың ең төменгі шегіне жетпейді")
+	}
+
+	currentRemaining := order.TotalAmount
+	if currentRemaining <= 0 {
+		return 0, errors.New("тапсырыс сомасы 0-ге тең, жеңілдік қолданылмайды")
 	}
 
 	var discount float64
 	switch rule.Type {
 	case DiscountPercent:
-		discount = order.TotalAmount * (rule.Value / 100.0)
+		if rule.Value <= 0 {
+			return 0, errors.New("жеңілдік пайызы 0-ден үлкен болуы керек")
+		}
+		discount = order.GrossAmount * (rule.Value / 100.0)
 		if rule.MaxDiscountLimit > 0 && discount > rule.MaxDiscountLimit {
 			discount = rule.MaxDiscountLimit
 		}
+		if discount > currentRemaining {
+			discount = currentRemaining
+		}
 	case DiscountFixed:
 		discount = rule.Value
-		if discount > order.TotalAmount {
-			discount = order.TotalAmount
+		if discount > currentRemaining {
+			discount = currentRemaining
 		}
 	case DiscountLoyalty:
 		discount = rule.Value
+		// Strictly cap loyalty points to not exceed remaining order amount
+		if discount > currentRemaining {
+			discount = currentRemaining
+		}
 	}
 
-	order.TotalAmount -= discount
-	order.UpdatedAt = time.Now()
+	order.DiscountAmount += discount
+	order.RecalculateTotal()
 	return discount, nil
 }
