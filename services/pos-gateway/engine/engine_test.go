@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math"
 	"testing"
 
 	"github.com/lunarec/pos-gateway/models"
@@ -62,6 +63,83 @@ func TestBillSplitter_SplitEqually(t *testing.T) {
 
 	if res.PerGuestAmount != 4000.0 {
 		t.Errorf("Expected 4000 per guest, got %f", res.PerGuestAmount)
+	}
+	if len(res.GuestShares) != 3 {
+		t.Errorf("Expected 3 guest shares, got %d", len(res.GuestShares))
+	}
+}
+
+func TestBillSplitter_SplitWithRemainder(t *testing.T) {
+	splitter := NewBillSplitter()
+	order := &models.Order{
+		Items: []models.OrderItem{
+			{Quantity: 1, UnitPrice: 1000.0}, // 1000 KZT split among 3 guests -> 333.34, 333.33, 333.33
+		},
+	}
+
+	res, err := splitter.SplitEqually(order, 3)
+	if err != nil {
+		t.Fatalf("SplitEqually returned error: %v", err)
+	}
+
+	sumShares := 0.0
+	for _, share := range res.GuestShares {
+		sumShares += share
+	}
+
+	// Floating point total must equal exactly 1000.0
+	if math.Abs(sumShares-1000.0) > 0.001 {
+		t.Errorf("Expected sum of guest shares to exactly equal 1000.0, got %f", sumShares)
+	}
+	if res.GuestShares[0] != 333.34 || res.GuestShares[1] != 333.33 || res.GuestShares[2] != 333.33 {
+		t.Errorf("Unexpected individual shares: %v", res.GuestShares)
+	}
+}
+
+func TestDiscountEngine_PromoAndLoyalty(t *testing.T) {
+	de := NewDiscountEngine()
+	de.RegisterPromo(&PromoRule{
+		Code:           "SPRING20",
+		Type:           DiscountPercent,
+		Value:          20.0,
+		MinOrderAmount: 1000.0,
+		IsActive:       true,
+	})
+	de.RegisterPromo(&PromoRule{
+		Code:     "VIPLOYALTY",
+		Type:     DiscountLoyalty,
+		Value:    15000.0, // higher than order total
+		IsActive: true,
+	})
+
+	order := &models.Order{
+		Items: []models.OrderItem{
+			{Quantity: 2, UnitPrice: 3000.0}, // 6000 total
+		},
+	}
+
+	// 1. Percentage promo
+	discount, err := de.ApplyPromo(order, "spring20")
+	if err != nil {
+		t.Fatalf("unexpected error applying promo: %v", err)
+	}
+	if discount != 1200.0 {
+		t.Errorf("expected 1200 discount, got %f", discount)
+	}
+	if order.TotalAmount != 4800.0 {
+		t.Errorf("expected order total 4800, got %f", order.TotalAmount)
+	}
+
+	// 2. Loyalty discount capping
+	loyaltyDiscount, err := de.ApplyPromo(order, "viployalty")
+	if err != nil {
+		t.Fatalf("unexpected error applying loyalty: %v", err)
+	}
+	if loyaltyDiscount != 4800.0 {
+		t.Errorf("expected loyalty discount capped to 4800, got %f", loyaltyDiscount)
+	}
+	if order.TotalAmount != 0.0 {
+		t.Errorf("expected order total to be 0, got %f", order.TotalAmount)
 	}
 }
 
