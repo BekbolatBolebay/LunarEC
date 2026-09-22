@@ -11,7 +11,7 @@ pub struct StockBatch {
     pub expiry_date: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum ValuationMethod {
     FIFO, // First In, First Out
     LIFO, // Last In, First Out
@@ -41,7 +41,9 @@ impl InventoryLedger {
     }
 
     pub fn receive_batch(&mut self, batch: StockBatch) {
-        self.batches.push_back(batch);
+        if batch.quantity > 0.0 {
+            self.batches.push_back(batch);
+        }
     }
 
     pub fn total_on_hand(&self) -> f64 {
@@ -59,9 +61,22 @@ impl InventoryLedger {
     }
 
     pub fn deduct_stock(&mut self, mut needed_qty: f64) -> DeductionLedger {
-        let requested = needed_qty;
+        let requested = needed_qty.max(0.0);
+        needed_qty = requested;
+
+        let detected_sku = self.batches.front().map(|b| b.item_sku.clone()).unwrap_or_else(|| "UNKNOWN_SKU".to_string());
         let mut total_cogs = 0.0;
         let mut batches_used = Vec::new();
+
+        if needed_qty <= 0.0 {
+            return DeductionLedger {
+                item_sku: detected_sku,
+                requested_qty: 0.0,
+                fulfilled_qty: 0.0,
+                total_cost_of_goods_sold: 0.0,
+                batches_used,
+            };
+        }
 
         match self.method {
             ValuationMethod::FIFO => {
@@ -122,7 +137,7 @@ impl InventoryLedger {
 
         let fulfilled = requested - needed_qty;
         DeductionLedger {
-            item_sku: "ITEM".to_string(),
+            item_sku: detected_sku,
             requested_qty: requested,
             fulfilled_qty: fulfilled,
             total_cost_of_goods_sold: (total_cogs * 100.0).round() / 100.0,
@@ -159,6 +174,52 @@ mod tests {
         let res = ledger.deduct_stock(15.0);
         assert_eq!(res.fulfilled_qty, 15.0);
         assert_eq!(res.total_cost_of_goods_sold, 62500.0);
+        assert_eq!(res.item_sku, "BEEF");
         assert_eq!(ledger.total_on_hand(), 5.0);
+    }
+
+    #[test]
+    fn test_lifo_deduction() {
+        let mut ledger = InventoryLedger::new(ValuationMethod::LIFO);
+        ledger.receive_batch(StockBatch {
+            batch_id: "B1".to_string(),
+            item_sku: "SALMON".to_string(),
+            quantity: 10.0,
+            unit_purchase_price: 5000.0,
+            received_date: "2026-09-01".to_string(),
+            expiry_date: None,
+        });
+        ledger.receive_batch(StockBatch {
+            batch_id: "B2".to_string(),
+            item_sku: "SALMON".to_string(),
+            quantity: 10.0,
+            unit_purchase_price: 6000.0,
+            received_date: "2026-09-10".to_string(),
+            expiry_date: None,
+        });
+
+        // LIFO deducts newest batch B2 first (10 @ 6000 + 5 @ 5000 = 60,000 + 25,000 = 85,000)
+        let res = ledger.deduct_stock(15.0);
+        assert_eq!(res.fulfilled_qty, 15.0);
+        assert_eq!(res.total_cost_of_goods_sold, 85000.0);
+        assert_eq!(ledger.total_on_hand(), 5.0);
+    }
+
+    #[test]
+    fn test_zero_or_negative_deduction_guard() {
+        let mut ledger = InventoryLedger::new(ValuationMethod::FIFO);
+        ledger.receive_batch(StockBatch {
+            batch_id: "B1".to_string(),
+            item_sku: "TEA".to_string(),
+            quantity: 20.0,
+            unit_purchase_price: 100.0,
+            received_date: "2026-09-01".to_string(),
+            expiry_date: None,
+        });
+
+        let res = ledger.deduct_stock(0.0);
+        assert_eq!(res.fulfilled_qty, 0.0);
+        assert_eq!(res.total_cost_of_goods_sold, 0.0);
+        assert_eq!(ledger.total_on_hand(), 20.0);
     }
 }
