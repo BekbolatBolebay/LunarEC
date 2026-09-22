@@ -5,24 +5,37 @@ Classifies dishes based on Profitability (Contribution Margin) and Popularity (V
 
 from typing import List, Dict, Any
 
+
 class MenuItem:
     def __init__(self, name: str, quantity_sold: int, sale_price: float, cost_price: float):
         self.name = name
-        self.quantity_sold = quantity_sold
-        self.sale_price = sale_price
-        self.cost_price = cost_price
-        self.margin = sale_price - cost_price
-        self.total_revenue = quantity_sold * sale_price
-        self.total_profit = quantity_sold * self.margin
+        self.quantity_sold = max(0, quantity_sold)
+        self.sale_price = max(0.0, sale_price)
+        self.cost_price = max(0.0, cost_price)
+        self.margin = self.sale_price - self.cost_price
+        self.total_revenue = self.quantity_sold * self.sale_price
+        self.total_profit = self.quantity_sold * self.margin
+
 
 class MenuEngineeringAnalyzer:
     def __init__(self, items: List[MenuItem]):
         self.items = items
 
     def run_abc_analysis(self) -> List[Dict[str, Any]]:
-        total_rev = sum(i.total_revenue for i in self.items)
-        if total_rev == 0:
+        if not self.items:
             return []
+
+        total_rev = sum(i.total_revenue for i in self.items)
+        if total_rev == 0.0:
+            return [
+                {
+                    "name": item.name,
+                    "revenue": 0.0,
+                    "share_pct": 0.0,
+                    "abc_category": "C",
+                }
+                for item in self.items
+            ]
 
         # Sort descending by revenue
         sorted_items = sorted(self.items, key=lambda x: x.total_revenue, reverse=True)

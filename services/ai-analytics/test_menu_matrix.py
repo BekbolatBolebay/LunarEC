@@ -1,5 +1,6 @@
 import unittest
 from menu_matrix import MenuEngineeringAnalyzer
+from abc_matrix import MenuItem, MenuEngineeringAnalyzer as ABCAnalyzer
 
 class TestMenuEngineering(unittest.TestCase):
     def test_menu_classification(self):
@@ -28,6 +29,18 @@ class TestMenuEngineering(unittest.TestCase):
         self.assertEqual(prediction["peak_hour"], 19) # 19:00 (7 PM)
         self.assertIn(12, prediction["rush_hours"]) # Lunch rush
         self.assertIn(19, prediction["rush_hours"]) # Dinner rush
+
+    def test_abc_zero_revenue_graceful_handling(self):
+        items = [
+            MenuItem("Zero Item 1", quantity_sold=0, sale_price=1000, cost_price=500),
+            MenuItem("Zero Item 2", quantity_sold=0, sale_price=2000, cost_price=1000),
+        ]
+        analyzer = ABCAnalyzer(items)
+        abc = analyzer.run_abc_analysis()
+        self.assertEqual(len(abc), 2)
+        self.assertEqual(abc[0]["abc_category"], "C")
+        self.assertEqual(abc[1]["abc_category"], "C")
+
 
 if __name__ == "__main__":
     unittest.main()
