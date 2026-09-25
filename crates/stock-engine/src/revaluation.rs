@@ -1,0 +1,2 @@
+
+// Inflationary FIFO stock revaluation
