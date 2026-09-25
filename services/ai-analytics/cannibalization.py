@@ -1,0 +1,2 @@
+
+# Promotional product cannibalization estimator
