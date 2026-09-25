@@ -1,0 +1,2 @@
+
+# Bayesian hierarchical price elasticity
