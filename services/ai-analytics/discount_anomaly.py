@@ -1,0 +1,2 @@
+
+# Cashier discount anomaly detector
