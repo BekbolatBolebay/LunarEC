@@ -3,25 +3,40 @@ package engine
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type ReceiptItem struct {
-	Name  string
-	Qty   int
-	Price float64
+	Name     string
+	Quantity float64
+	PriceKZT int64
 }
 
-func FormatReceipt(orderID, table string, items []ReceiptItem, total float64) string {
-	var b strings.Builder
-	b.WriteString("================================\n")
-	b.WriteString("       🌙 LUNAR EC POS\n")
-	b.WriteString(fmt.Sprintf(" Order: %s | Table: %s\n", orderID, table))
-	b.WriteString("--------------------------------\n")
-	for _, it := range items {
-		b.WriteString(fmt.Sprintf(" %-18s x%d %8.0f ₸\n", it.Name, it.Qty, it.Price*float64(it.Qty)))
+type Receipt struct {
+	StoreName string
+	Cashier   string
+	Timestamp time.Time
+	Items     []ReceiptItem
+}
+
+func (r *Receipt) FormatText() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("=== %s ===
+", r.StoreName))
+	sb.WriteString(fmt.Sprintf("Time: %s | Cashier: %s
+", r.Timestamp.Format("2006-01-02 15:04"), r.Cashier))
+	sb.WriteString("----------------------------------------
+")
+	var total int64
+	for _, it := range r.Items {
+		itemTotal := int64(it.Quantity * float64(it.PriceKZT))
+		total += itemTotal
+		sb.WriteString(fmt.Sprintf("%-20s x%.1f %d KZT
+", it.Name, it.Quantity, itemTotal))
 	}
-	b.WriteString("--------------------------------\n")
-	b.WriteString(fmt.Sprintf(" TOTAL: %20.0f ₸\n", total))
-	b.WriteString("================================\n")
-	return b.String()
+	sb.WriteString("----------------------------------------
+")
+	sb.WriteString(fmt.Sprintf("TOTAL: %d KZT
+", total))
+	return sb.String()
 }
