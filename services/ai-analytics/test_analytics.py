@@ -18,5 +18,16 @@ class TestDemandPredictor(unittest.TestCase):
         self.assertEqual(demand["required_kg"], 20.0)
         self.assertEqual(demand["recommended_order_kg"], 22.0)
 
+from demand_forecaster import DemandForecaster
+
+class TestDemandForecaster(unittest.TestCase):
+    def test_moving_average_calculation(self):
+        avg = DemandForecaster.moving_average([10.0, 20.0, 30.0], window=3)
+        self.assertEqual(avg, 20.0)
+
+    def test_exponential_smoothing(self):
+        forecast = DemandForecaster.exponential_smoothing([100.0, 110.0, 120.0], alpha=0.5)
+        self.assertGreater(forecast, 100.0)
+
 if __name__ == '__main__':
     unittest.main()
