@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
 import { 
   initialLeads, initialCustomers, initialStock, initialRecipes, 
@@ -16,11 +16,13 @@ import { OdooSyncModal } from '@/components/odoo/OdooSyncModal';
 import { OdooAnalyticsView } from '@/components/odoo/OdooAnalyticsView';
 import { OdooCreateModal } from '@/components/odoo/OdooCreateModal';
 import { KaspiFiscalPaymentModal } from '@/components/odoo/KaspiFiscalPaymentModal';
-import { QrCode, ReceiptText } from 'lucide-react';
+import { TwentyCommandPalette } from '@/components/twenty/TwentyCommandPalette';
+import { TwentyFilterBar } from '@/components/twenty/TwentyFilterBar';
+import { QrCode, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function OdooHomePage() {
-  const { activeModule, viewMode } = useApp();
+  const { activeModule, setActiveModule, viewMode, setViewMode } = useApp();
 
   // State
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
@@ -36,7 +38,54 @@ export default function OdooHomePage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const [isKaspiPaymentOpen, setIsKaspiPaymentOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  // Twenty Filter & Sort Controls
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeStageFilter, setActiveStageFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('revenue-desc');
+
+  // Twenty-style Global Keyboard Shortcuts (Cmd+K, C, P, S, 1, 2, 3)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      const isInputActive = activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.getAttribute('contenteditable') === 'true';
+
+      // ⌘K or Ctrl+K opens Command Palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Ignore single-key shortcuts when typing in inputs
+      if (isInputActive) return;
+
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        setIsCreateOpen(true);
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        setIsKaspiPaymentOpen(true);
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        setIsSyncOpen(true);
+      } else if (e.key === '1') {
+        e.preventDefault();
+        setViewMode('kanban');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setViewMode('list');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        setViewMode('analytics');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setViewMode]);
 
   // Actions
   const handleUpdateLeadStage = (leadId: string, newStage: Lead['stage']) => {
@@ -104,13 +153,77 @@ export default function OdooHomePage() {
     setChatter(prev => [newNote, ...prev]);
   };
 
+  // Filtered & Sorted Leads
+  const filteredLeads = useMemo(() => {
+    let result = [...leads];
+
+    if (activeStageFilter !== 'all') {
+      result = result.filter(l => l.stage === activeStageFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        l =>
+          l.title.toLowerCase().includes(q) ||
+          l.contactName.toLowerCase().includes(q) ||
+          (l.company && l.company.toLowerCase().includes(q)) ||
+          l.phone.includes(q) ||
+          String(l.expectedRevenue).includes(q)
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortBy === 'revenue-desc') return b.expectedRevenue - a.expectedRevenue;
+      if (sortBy === 'revenue-asc') return a.expectedRevenue - b.expectedRevenue;
+      if (sortBy === 'probability-desc') return b.probability - a.probability;
+      if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
+      return 0;
+    });
+
+    return result;
+  }, [leads, activeStageFilter, searchQuery, sortBy]);
+
+  // Filtered Stock
+  const filteredStock = useMemo(() => {
+    if (!searchQuery.trim()) return stock;
+    const q = searchQuery.toLowerCase();
+    return stock.filter(
+      s => s.name.toLowerCase().includes(q) || s.sku.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
+    );
+  }, [stock, searchQuery]);
+
+  // Filtered Customers
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery.trim()) return customers;
+    const q = searchQuery.toLowerCase();
+    return customers.filter(
+      c => c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.email && c.email.toLowerCase().includes(q))
+    );
+  }, [customers, searchQuery]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F6F7F9] relative">
-      {/* Odoo Unified Navigation Bar */}
+      {/* Odoo & Twenty Unified Navigation Bar */}
       <OdooNavbar 
         onOpenCreate={() => setIsCreateOpen(true)}
         onOpenSync={() => setIsSyncOpen(true)}
       />
+
+      {/* Twenty-style Dynamic Filter & Quick Palette Trigger Bar */}
+      {(viewMode === 'kanban' || viewMode === 'list') && (
+        <TwentyFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeStageFilter={activeStageFilter}
+          onStageFilterChange={setActiveStageFilter}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          totalCount={filteredLeads.length}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        />
+      )}
 
       {/* Main Viewport Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -118,7 +231,7 @@ export default function OdooHomePage() {
           <OdooAnalyticsView />
         ) : viewMode === 'kanban' ? (
           <OdooKanbanBoard 
-            leads={leads}
+            leads={filteredLeads}
             employees={employees}
             tables={tables}
             onSelectLead={(l) => setSelectedLead(l)}
@@ -127,8 +240,8 @@ export default function OdooHomePage() {
           />
         ) : (
           <OdooListView 
-            customers={customers}
-            stock={stock}
+            customers={filteredCustomers}
+            stock={filteredStock}
             recipes={recipes}
             purchaseOrders={purchaseOrders}
             employees={employees}
@@ -157,7 +270,7 @@ export default function OdooHomePage() {
         </button>
       </aside>
 
-      {/* Modals */}
+      {/* Modals & Palettes */}
       <OdooAppLauncherModal />
       
       <OdooCreateModal 
@@ -184,6 +297,21 @@ export default function OdooHomePage() {
         isOpen={isKaspiPaymentOpen}
         onClose={() => setIsKaspiPaymentOpen(false)}
         orderNumber="ORD-2026-88"
+      />
+
+      {/* Twenty-inspired Command Palette */}
+      <TwentyCommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onOpenKaspiPayment={() => setIsKaspiPaymentOpen(true)}
+        onOpenCreateLead={() => setIsCreateOpen(true)}
+        onOpenSync={() => setIsSyncOpen(true)}
+        onSelectModule={setActiveModule}
+        onSelectView={setViewMode}
+        leads={leads}
+        customers={customers}
+        stock={stock}
+        onSelectLead={(lead) => setSelectedLead(lead)}
       />
     </div>
   );

@@ -5,8 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number, currency: string = '₸'): string {
-  return `${amount.toLocaleString('kk-KZ')} ${currency}`;
+export function formatCurrency(amount?: number | null, currency: string = '₸'): string {
+  const val = Number(amount) || 0;
+  return `${val.toLocaleString('kk-KZ')} ${currency}`;
 }
 
 export function formatDate(dateStr?: string | Date): string {

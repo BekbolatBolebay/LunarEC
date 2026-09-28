@@ -6,6 +6,7 @@ import {
   Clock, Send, Calendar, ArrowRight, ShieldCheck, FileText, CheckCircle2 
 } from 'lucide-react';
 import { Lead, ChatterNote, formatCurrency } from '@/lib/store';
+import { TwentyActivityTimeline } from '@/components/twenty/TwentyActivityTimeline';
 import { toast } from 'sonner';
 
 interface FormModalProps {
@@ -35,6 +36,7 @@ export function OdooFormModal({
   const [stage, setStage] = useState<Lead['stage']>(lead.stage);
   const [newNote, setNewNote] = useState('');
   const [activeChatterTab, setActiveChatterTab] = useState<'note' | 'activity'>('note');
+  const [chatterMode, setChatterMode] = useState<'twenty' | 'classic'>('twenty');
 
   const stages: { id: Lead['stage']; label: string }[] = [
     { id: 'new', label: 'Жаңа' },
@@ -248,90 +250,124 @@ export function OdooFormModal({
             </div>
           </div>
 
-          {/* Odoo Chatter Section */}
+          {/* Chatter & Activity Section */}
           <div className="border-t border-slate-200 pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-odoo-purple" />
-                <span>Odoo Chatter (Әрекеттер мен Ескертпелер тарихы)</span>
-              </h4>
-
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setActiveChatterTab('note')}
-                  className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
-                    activeChatterTab === 'note'
-                      ? 'bg-odoo-purple text-white shadow-2xs'
+                  onClick={() => setChatterMode('twenty')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+                    chatterMode === 'twenty'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  📝 Ескертпе жазу
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Twenty 360 Хронология</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveChatterTab('activity')}
-                  className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
-                    activeChatterTab === 'activity'
-                      ? 'bg-odoo-purple text-white shadow-2xs'
+                  onClick={() => setChatterMode('classic')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+                    chatterMode === 'classic'
+                      ? 'bg-odoo-purple text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  ⏰ Әрекет жоспарлау
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Odoo Chatter</span>
                 </button>
               </div>
-            </div>
 
-            {/* Chatter Input Box */}
-            <form onSubmit={handleAddNote} className="mb-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder={
-                    activeChatterTab === 'note'
-                      ? 'Ішкі ескертпе немесе клиентпен сөйлесу нәтижесін жазыңыз...'
-                      : 'Жоспарланған әрекет: "Ертең 14:00 келісім-шартты жіберу"...'
-                  }
-                  className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-odoo-purple/20 focus:border-odoo-purple outline-none"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-odoo-purple text-white text-xs font-semibold rounded-lg hover:bg-odoo-purple-dark flex items-center gap-1.5 transition-colors"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Қосу</span>
-                </button>
-              </div>
-            </form>
-
-            {/* Timeline Stream */}
-            <div className="space-y-3">
-              {recordChatter.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                  Әзірге ескертпелер жоқ. Жоғарыдағы жолақ арқылы алғашқы жазбаңызды қалдырыңыз.
-                </div>
-              ) : (
-                recordChatter.map((note) => (
-                  <div
-                    key={note.id}
-                    className="p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-3 text-xs"
+              {chatterMode === 'classic' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveChatterTab('note')}
+                    className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
+                      activeChatterTab === 'note'
+                        ? 'bg-odoo-purple text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-odoo-purple/10 text-odoo-purple flex items-center justify-center font-bold text-xs flex-shrink-0">
-                      {note.author.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-800">{note.author}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{note.createdAt}</span>
-                      </div>
-                      <p className="text-slate-600 mt-1 leading-relaxed">{note.content}</p>
-                    </div>
-                  </div>
-                ))
+                    📝 Ескертпе жазу
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveChatterTab('activity')}
+                    className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
+                      activeChatterTab === 'activity'
+                        ? 'bg-odoo-purple text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    ⏰ Әрекет жоспарлау
+                  </button>
+                </div>
               )}
             </div>
+
+            {chatterMode === 'twenty' ? (
+              <TwentyActivityTimeline
+                recordId={lead.id}
+                notes={chatter}
+                onAddNote={onAddNote}
+              />
+            ) : (
+              <>
+                {/* Chatter Input Box */}
+                <form onSubmit={handleAddNote} className="mb-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      placeholder={
+                        activeChatterTab === 'note'
+                          ? 'Ішкі ескертпе немесе клиентпен сөйлесу нәтижесін жазыңыз...'
+                          : 'Жоспарланған әрекет: "Ертең 14:00 келісім-шартты жіберу"...'
+                      }
+                      className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-odoo-purple/20 focus:border-odoo-purple outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-odoo-purple text-white text-xs font-semibold rounded-lg hover:bg-odoo-purple-dark flex items-center gap-1.5 transition-colors"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Қосу</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Timeline Stream */}
+                <div className="space-y-3">
+                  {recordChatter.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                      Әзірге ескертпелер жоқ. Жоғарыдағы жолақ арқылы алғашқы жазбаңызды қалдырыңыз.
+                    </div>
+                  ) : (
+                    recordChatter.map((note) => (
+                      <div
+                        key={note.id}
+                        className="p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-3 text-xs"
+                      >
+                        <div className="w-7 h-7 rounded-full bg-odoo-purple/10 text-odoo-purple flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          {note.author.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-800">{note.author}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{note.createdAt}</span>
+                          </div>
+                          <p className="text-slate-600 mt-1 leading-relaxed">{note.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
