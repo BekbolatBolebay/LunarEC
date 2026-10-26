@@ -145,3 +145,9 @@ jobs:
               merge_method: 'squash'
             });
             console.log(`PR #${pr.data.number} merged successfully!`);
+
+      - name: 🔄 Purge GitHub Camo Cache for Streak Badge
+        run: |
+          echo "Purging GitHub Camo cache to keep streak stats live..."
+          curl -s -X PURGE "https://camo.githubusercontent.com/d2c187bf0c524701d207bd59ad227c0c3f558d0762e7a266332bf32901dc1504/68747470733a2f2f73747265616b2d73746174732e64656d6f6c61622e636f6d2f3f757365723d42656b626f6c6174426f6c65626179267468656d653d7261646963616c26626f726465725f7261646975733d3130" || true
+
