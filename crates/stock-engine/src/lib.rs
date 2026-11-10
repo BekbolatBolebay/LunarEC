@@ -11,3 +11,4 @@ pub mod recipe_scaler;
 pub mod discount_matrix;
 pub mod bin_location;
 pub mod audit_trail;
+pub mod hybrid_alloc;
