@@ -1,9 +1,9 @@
 {
   "project": "LunarEC",
   "version": "0.1.0",
-  "last_updated": "2026-11-22 21:53:53",
+  "last_updated": "2026-11-23 01:56:30",
   "timezone": "Asia/Almaty (UTC+5)",
-  "week": 47,
+  "week": 48,
   "stack": {
     "typescript": "Next.js 15 — UI & Web Client",
     "rust": "Stock Engine — FIFO/LIFO, BOM, Warehouse",
